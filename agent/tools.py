@@ -2,6 +2,8 @@
 
 import subprocess
 
+import requests
+
 
 def read_file(path: str) -> str:
     """Read the contents of a file at the given path.
@@ -36,6 +38,46 @@ def run_shell(command: str, timeout: int = 30) -> str:
         return f"Error: command timed out after {timeout} seconds"
     except Exception as e:
         return f"Error running shell command: {e}"
+
+
+def web_search(query: str, max_results: int = 5) -> str:
+    """Search the web using DuckDuckGo and return a summary of results.
+
+    Returns a formatted string of results, or an error message on failure.
+    """
+    try:
+        resp = requests.get(
+            "https://api.duckduckgo.com/",
+            params={"q": query, "format": "json", "no_html": "1", "skip_disambig": "1"},
+            timeout=10,
+            headers={"User-Agent": "cli-ai-agent/0.1"},
+        )
+        resp.raise_for_status()
+        data = resp.json()
+
+        results = []
+        print(data)
+
+        # Abstract (instant answer)
+        if data.get("AbstractText"):
+            results.append(f"Summary: {data['AbstractText']}")
+            if data.get("AbstractURL"):
+                results.append(f"Source: {data['AbstractURL']}")
+
+        # Related topics
+        for topic in data.get("RelatedTopics", [])[:max_results]:
+            if isinstance(topic, dict) and topic.get("Text"):
+                line = topic["Text"]
+                if topic.get("FirstURL"):
+                    line += f" ({topic['FirstURL']})"
+                results.append(line)
+
+        if not results:
+            return f"No results found for query: '{query}'"
+
+        return "\n\n".join(results)
+    except requests.RequestException as e:
+        return f"Error performing web search: {e}"
 
 
 class ToolRegistry:
@@ -80,6 +122,27 @@ class ToolRegistry:
                 },
             },
         },
+        {
+            "type": "function",
+            "function": {
+                "name": "web_search",
+                "description": "Search the web using DuckDuckGo and return a summary of results.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "query": {
+                            "type": "string",
+                            "description": "The search query",
+                        },
+                        "max_results": {
+                            "type": "integer",
+                            "description": "Maximum number of results to return (default: 5)",
+                        },
+                    },
+                    "required": ["query"],
+                },
+            },
+        },
     ]
 
     def get_definitions(self) -> list[dict]:
@@ -96,6 +159,8 @@ class ToolRegistry:
                 return read_file(**arguments)
             elif name == "run_shell":
                 return run_shell(**arguments)
+            elif name == "web_search":
+                return web_search(**arguments)
             else:
                 return f"Error: unknown tool '{name}'"
         except Exception as e:

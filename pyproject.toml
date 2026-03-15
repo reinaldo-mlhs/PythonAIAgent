@@ -13,6 +13,7 @@ dependencies = [
     "click",
     "python-dotenv",
     "hypothesis",
+    "requests",
 ]
 
 [project.scripts]
