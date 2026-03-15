@@ -1,0 +1,22 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "cli-python-ai-agent"
+version = "0.1.0"
+description = "A terminal-based conversational AI agent with REPL interface"
+requires-python = ">=3.11"
+dependencies = [
+    "openai",
+    "rich",
+    "click",
+    "python-dotenv",
+    "hypothesis",
+]
+
+[project.scripts]
+kiro-agent = "agent.cli:main"
+
+[tool.hatch.build.targets.wheel]
+packages = ["agent"]
