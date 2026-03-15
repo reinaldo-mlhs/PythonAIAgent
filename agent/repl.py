@@ -117,7 +117,7 @@ class REPLSession:
                 full_response = self._llm.stream_response(
                     messages=self._history,
                     tools=tools,
-                    on_token=formatter.print_assistant_token,
+                    on_token=lambda _: None,
                     on_tool_call=on_tool_call,
                 )
 
