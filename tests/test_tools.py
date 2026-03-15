@@ -56,7 +56,7 @@ class TestToolRegistry:
     def test_get_definitions_returns_list(self):
         defs = self.registry.get_definitions()
         assert isinstance(defs, list)
-        assert len(defs) == 2
+        assert len(defs) == 3
 
     def test_definitions_contain_read_file(self):
         names = [d["function"]["name"] for d in self.registry.get_definitions()]

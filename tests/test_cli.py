@@ -58,6 +58,7 @@ class TestSystemPromptFlag:
             mock_load.assert_called_once_with(
                 model_override=None,
                 system_prompt_override="You are a pirate.",
+                mcp_config_override=None,
             )
 
     def test_system_prompt_default_is_none(self, runner):
@@ -71,6 +72,7 @@ class TestSystemPromptFlag:
             mock_load.assert_called_once_with(
                 model_override=None,
                 system_prompt_override=None,
+                mcp_config_override=None,
             )
 
 
@@ -86,6 +88,7 @@ class TestModelFlag:
             mock_load.assert_called_once_with(
                 model_override="gpt-3.5-turbo",
                 system_prompt_override=None,
+                mcp_config_override=None,
             )
 
     def test_model_default_is_none(self, runner):
@@ -99,6 +102,7 @@ class TestModelFlag:
             mock_load.assert_called_once_with(
                 model_override=None,
                 system_prompt_override=None,
+                mcp_config_override=None,
             )
 
     def test_model_and_system_prompt_together(self, runner):
@@ -112,6 +116,7 @@ class TestModelFlag:
             mock_load.assert_called_once_with(
                 model_override="claude-3",
                 system_prompt_override="Be concise.",
+                mcp_config_override=None,
             )
 
 
@@ -132,3 +137,37 @@ class TestMissingApiKey:
              patch("agent.cli.REPLSession") as mock_repl:
             runner.invoke(main, [])
         mock_repl.assert_not_called()
+
+
+class TestMcpConfigFlag:
+    def test_mcp_config_passed_to_load_config(self, runner):
+        with patch("agent.cli.load_config") as mock_load, \
+             patch("agent.cli.REPLSession") as mock_repl:
+            mock_load.return_value = MagicMock()
+            mock_repl.return_value.run.return_value = None
+
+            runner.invoke(main, ["--mcp-config", "mcp.json"])
+
+            mock_load.assert_called_once_with(
+                model_override=None,
+                system_prompt_override=None,
+                mcp_config_override="mcp.json",
+            )
+
+    def test_mcp_config_default_is_none(self, runner):
+        with patch("agent.cli.load_config") as mock_load, \
+             patch("agent.cli.REPLSession") as mock_repl:
+            mock_load.return_value = MagicMock()
+            mock_repl.return_value.run.return_value = None
+
+            runner.invoke(main, [])
+
+            mock_load.assert_called_once_with(
+                model_override=None,
+                system_prompt_override=None,
+                mcp_config_override=None,
+            )
+
+    def test_help_shows_mcp_config_option(self, runner):
+        result = runner.invoke(main, ["--help"])
+        assert "--mcp-config" in result.output

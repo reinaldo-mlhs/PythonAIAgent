@@ -19,11 +19,13 @@ class Config:
     base_url: str | None
     system_prompt: str
     shell_timeout: int  # seconds
+    mcp_config: str | None  # path to MCP servers JSON config file
 
 
 def load_config(
     model_override: str | None = None,
     system_prompt_override: str | None = None,
+    mcp_config_override: str | None = None,
 ) -> Config:
     """Load configuration from environment variables and optional .env file.
 
@@ -51,6 +53,7 @@ def load_config(
     base_url = os.environ.get("LLM_BASE_URL") or None
     system_prompt = system_prompt_override or "You are a helpful assistant."
     shell_timeout = 30
+    mcp_config = mcp_config_override or os.environ.get("MCP_CONFIG") or None
 
     return Config(
         api_key=api_key,
@@ -58,4 +61,5 @@ def load_config(
         base_url=base_url,
         system_prompt=system_prompt,
         shell_timeout=shell_timeout,
+        mcp_config=mcp_config,
     )

@@ -2,11 +2,13 @@
 
 from __future__ import annotations
 
+import asyncio
 import logging
 
 from agent import formatter
 from agent.config import Config
 from agent.llm_client import LLMClient
+from agent.mcp_client import MCPClient, load_mcp_client
 from agent.tools import ToolRegistry
 
 logger = logging.getLogger(__name__)
@@ -33,6 +35,9 @@ class REPLSession:
         self._history: list[dict] = [
             {"role": "system", "content": config.system_prompt}
         ]
+        self._mcp: MCPClient | None = load_mcp_client(config.mcp_config)
+        if self._mcp:
+            asyncio.get_event_loop().run_until_complete(self._mcp.connect_all())
 
     # ── Public entry point ────────────────────────────────────────────────────
 
@@ -40,25 +45,29 @@ class REPLSession:
         """Start the interactive REPL loop."""
         formatter.print_welcome()
 
-        while True:
-            try:
-                text = input("\n> ").strip()
-            except KeyboardInterrupt:
-                print()
-                formatter.print_error("Interrupted. Goodbye!")
-                return
-            except EOFError:
-                print()
-                formatter.print_error("EOF received. Goodbye!")
-                return
+        try:
+            while True:
+                try:
+                    text = input("\n> ").strip()
+                except KeyboardInterrupt:
+                    print()
+                    formatter.print_error("Interrupted. Goodbye!")
+                    return
+                except EOFError:
+                    print()
+                    formatter.print_error("EOF received. Goodbye!")
+                    return
 
-            if not text:
-                continue
+                if not text:
+                    continue
 
-            if self._handle_command(text):
-                continue
+                if self._handle_command(text):
+                    continue
 
-            self._submit_turn(text)
+                self._submit_turn(text)
+        finally:
+            if self._mcp:
+                asyncio.get_event_loop().run_until_complete(self._mcp.close())
 
     # ── Command handling ──────────────────────────────────────────────────────
 
@@ -93,16 +102,21 @@ class REPLSession:
         self._truncate_history()
 
         registry = ToolRegistry()
+        tools = registry.get_definitions()
+        if self._mcp:
+            tools = tools + self._mcp.get_definitions()
 
         def on_tool_call(name: str, args: dict) -> str:
             formatter.print_tool_call(name, args)
+            if self._mcp and self._mcp.owns(name):
+                return self._mcp.execute(name, args)
             return registry.execute(name, args)
 
         try:
             with formatter.print_loading():
                 full_response = self._llm.stream_response(
                     messages=self._history,
-                    tools=registry.get_definitions(),
+                    tools=tools,
                     on_token=formatter.print_assistant_token,
                     on_tool_call=on_tool_call,
                 )

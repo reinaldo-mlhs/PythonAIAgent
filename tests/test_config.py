@@ -14,9 +14,8 @@ class TestLoadConfig:
             assert config.api_key == "test-key"
 
     def test_raises_config_error_when_api_key_missing(self):
-        with patch.dict(os.environ, {}, clear=True):
-            # Ensure LLM_API_KEY is not set
-            os.environ.pop("LLM_API_KEY", None)
+        with patch("agent.config.load_dotenv"), \
+             patch.dict(os.environ, {}, clear=True):
             with pytest.raises(ConfigError, match="LLM_API_KEY"):
                 load_config()
 
@@ -78,3 +77,25 @@ class TestLoadConfig:
             with patch.dict(os.environ, {}, clear=True):
                 config = load_config()
                 assert config.api_key == "dotenv-key"
+
+
+class TestMcpConfig:
+    def test_mcp_config_defaults_to_none(self):
+        with patch.dict(os.environ, {"LLM_API_KEY": "test-key"}, clear=True):
+            config = load_config()
+            assert config.mcp_config is None
+
+    def test_mcp_config_from_env_var(self):
+        with patch.dict(os.environ, {"LLM_API_KEY": "test-key", "MCP_CONFIG": "servers.json"}, clear=True):
+            config = load_config()
+            assert config.mcp_config == "servers.json"
+
+    def test_mcp_config_override_takes_precedence(self):
+        with patch.dict(os.environ, {"LLM_API_KEY": "test-key", "MCP_CONFIG": "env.json"}, clear=True):
+            config = load_config(mcp_config_override="override.json")
+            assert config.mcp_config == "override.json"
+
+    def test_mcp_config_override_without_env(self):
+        with patch.dict(os.environ, {"LLM_API_KEY": "test-key"}, clear=True):
+            config = load_config(mcp_config_override="my_servers.json")
+            assert config.mcp_config == "my_servers.json"

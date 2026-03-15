@@ -22,6 +22,7 @@ def _make_config() -> Config:
         base_url=None,
         system_prompt="You are a helpful assistant.",
         shell_timeout=30,
+        mcp_config=None,
     )
 
 

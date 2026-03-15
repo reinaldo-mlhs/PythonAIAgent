@@ -19,12 +19,13 @@ def _make_config(system_prompt: str = "You are a helpful assistant.") -> Config:
         base_url=None,
         system_prompt=system_prompt,
         shell_timeout=30,
+        mcp_config=None,
     )
 
 
 def _make_session(system_prompt: str = "You are a helpful assistant.") -> REPLSession:
     config = _make_config(system_prompt)
-    with patch("agent.repl.LLMClient"):
+    with patch("agent.repl.LLMClient"), patch("agent.repl.load_mcp_client", return_value=None):
         session = REPLSession(config)
     return session
 
